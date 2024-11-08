@@ -1,22 +1,22 @@
 const mongoose =require('mongoose');
 
-
-
+// product item schema
+const itemSchema= new mongoose.Schema({
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true },
+  admin: {type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+},{ _id: false });
   
+
+// order  schema
 const orderSchema = new mongoose.Schema({
   user: { 
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
    },
-  items: [
-      {
-      product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-      quantity: { type: Number, required: true },
-      price: { type: Number, required: true },
-      admin: {type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    }
-  ], // Array of items in the order
+  items: [itemSchema], // Array of items in the order
   totalAmount: {
      type: Number,
      required: true 

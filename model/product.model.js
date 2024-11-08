@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+const ratingSchema=new mongoose.Schema( {
+   rat:{type:Number},
+   ratUser:{type:mongoose.Schema.Types.ObjectId},
+},{ _id: false });
+
 const productSchema = new mongoose.Schema({
     pName:{
         type:String,
@@ -25,12 +30,7 @@ const productSchema = new mongoose.Schema({
         type:Number,
         required:[true,'stock number is require']
     },
-    rating:[ 
-        {
-            rat:{type:Number},
-            ratUser:{type:mongoose.Schema.Types.ObjectId},
-        },
-    ],
+    rating:[ratingSchema],
     averageRat:{
         type:Number,
         default:0
