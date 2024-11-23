@@ -15,7 +15,7 @@ const logInUser=async(req,res)=>{
                                 userId:user._id,
                                 userRole:user.isAdmin
                               };
-                              const token =JWT.sign(payload,process.env.JWT_SECRET);
+                              const token =JWT.sign(payload,process.env.JWT_SECRET,{expiresIn:'10d'});
 
                              return res.status(200).json({
                                 success:true,

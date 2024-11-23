@@ -7,10 +7,10 @@ const router =require('express').Router();
 
 
 router.post('/user/register',uploadProfle.single('profile'),registerUser);
-router.get('/user/:uId',cheakAuth,getUser);
+router.get('/user',cheakAuth,getUser);
 router.patch('/user/update/:uId',cheakAuth,uploadProfle.single('profile'),updateUser);
 router.patch('/user/uP/:uId',cheakAuth,updatePass);
-router.patch('/user/switchAdmin/:uId',cheakAuth,updateAdmin);
+router.patch('/user/switchAdmin',cheakAuth,updateAdmin);
 router.delete('/user/delete/:uId',cheakAuth,deleteUser);
 
 

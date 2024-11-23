@@ -2,11 +2,12 @@ const USER = require("../model/user.model");
 const bcrypt=require('bcrypt');
 const cloudinary  = require("../utilities/imgCloud");
 const saltRound =10;
+const JWT = require('jsonwebtoken');
 
 // Register User
 const registerUser=async(req,res)=>{
   try {
-      const {name,mail,password}=req.body;
+      const {name,mail,password}=await req.body;
       if (name && mail && password) {
 
         const email = await USER.findOne({mail:mail});
@@ -30,7 +31,7 @@ const registerUser=async(req,res)=>{
         });
 
         await newUser.save();
-        if(newUser) return res.status(201).json({success:true,message:'Registration successfully',newUser});
+        if(newUser) return res.status(201).json({success:true,message:'Registration successfully'});
         else return res.status(400).json({success:false,message:'Registration failed'});
       } else {
         return res.status(404).json({success:false,message:'Please fill the form '});
@@ -107,17 +108,25 @@ const updatePass=async (req,res)=>{
 const updateAdmin=async (req,res)=>{
     try {
         const {password}=req.body;
-        const {uId}=req.params;
+        const userId=req.userId;
   
-          const user = await USER.findOne({_id:uId});
+          const user = await USER.findOne({_id:userId});
           if (user) { 
             const result = await bcrypt.compare(password, user.password);
             if(result){
-                const userUptoAdmin = await USER.findOneAndUpdate({_id:uId},{$set:{
+                const userUptoAdmin = await USER.findOneAndUpdate({_id:userId},{$set:{
                     isAdmin:true
                  }},{new:true});
         
-                if(userUptoAdmin) return res.status(201).json({success:true,message:'Congress,You switch to vendor'});
+                if(userUptoAdmin) {
+                    const payload= {
+                        userId:user._id,
+                        userRole:true
+                      };
+                      const token =JWT.sign(payload,process.env.JWT_SECRET,{expiresIn:'10d'});
+
+                    return res.status(201).json({success:true,message:'Congress,You switch to vendor',token:token});
+                }
             }else return res.status(400).json({success:false,message:'Password Incorrect'});
         }else{
             return res.status(404).json({success:false,message:'User Not found'});
@@ -131,8 +140,8 @@ const updateAdmin=async (req,res)=>{
 // get user 
 const getUser=async(req,res)=>{
     try {
-        const {uId}=req.params;
-        const user = await USER.findOne({_id:uId});
+        const userId=req.userId;
+        const user = await USER.findOne({_id:userId});
         if(user){
             return res.status(200).json({success:true,user});
         }else{

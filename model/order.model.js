@@ -1,26 +1,51 @@
 const mongoose =require('mongoose');
 
 // product item schema
-const itemSchema= new mongoose.Schema({
-  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-  quantity: { type: Number, required: true },
-  price: { type: Number, required: true },
-  admin: {type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-},{ _id: false });
+// const itemSchema= new mongoose.Schema({
+//   type:Array,
+// },{ _id: false });
   
 
 // order  schema
 const orderSchema = new mongoose.Schema({
-  user: { 
+  customerId : { 
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'users',
     required: true
    },
-  items: [itemSchema], // Array of items in the order
-  totalAmount: {
-     type: Number,
-     required: true 
-    },
+   customerPhone : { 
+    type: String,
+    required: true
+   },
+   adminId : { 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'users',
+    required: true
+   },
+   productId : { 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'products',
+    required: true
+   },
+   pName: {
+    type: String, 
+    required: true 
+  },
+  price: {
+    type: Number, 
+    required: true 
+  },
+   quantity: {
+    type: String, 
+    required: true 
+  },
+  totalPrice: {
+    type: Number, 
+    required: true 
+  },
+  productImg: {
+    type: Array, 
+  },
   shippingAddress: {
     type: String, 
     required: true 
@@ -37,8 +62,12 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: { 
     type: String, 
-    required: true 
-  }, // e.g., 'credit_card', 'paypal'
+    default:'none'
+  },// e.g., 'credit_card', 'paypal'
+  cashOnDelivery: { 
+    type: Boolean, 
+    // default:false
+  }, 
   createdAt: { 
     type: Date, 
     default: Date.now 

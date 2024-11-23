@@ -1,9 +1,5 @@
 const mongoose =require('mongoose');
 
-const cartSchema= new mongoose.Schema({
-     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-     quantity:{type:Number,default:1}
-},{ _id: false });
 
 const userSchema = new mongoose.Schema({
     name :{
@@ -36,7 +32,6 @@ const userSchema = new mongoose.Schema({
         type:Boolean,
         default:false
     },
-    cart: [cartSchema]
 },{timestamps:true});
 
 const USER = mongoose.model('users',userSchema);

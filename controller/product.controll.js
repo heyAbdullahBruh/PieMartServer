@@ -1,3 +1,4 @@
+const Cart = require("../model/cart.model");
 const Product = require("../model/product.model");
 const cloudinary  = require("../utilities/imgCloud");
 
@@ -6,24 +7,27 @@ const cloudinary  = require("../utilities/imgCloud");
 const createProduct=async(req, res)=>{
     try {
         const {pName, pDesc, brand, catagory, price, stock}=req.body;
-        const images=req.files;
-        if (pName && pDesc && brand && catagory && price && stock) {
+        if (pName && pDesc && brand && catagory && price && stock ) {
             const adminId =req.userId;
-            const imgUrls =[];
-            for(const image of images){
-                const result =  await cloudinary.uploader.upload(image.path, {
-                    resource_type:"auto"
+            const images=req.files;
+            console.log(images);
+        // const imgUrls =[];
+            const imgUrls = await Promise.all(
+                images.map(async (image) => {
+                  const result = await cloudinary.uploader.upload(image.path, {
+                    resource_type: "auto",
                   });
-                  imgUrls.push({
-                    photo:result.secure_url, 
-                    imgId:result.public_id
-                  });
-            };
+                  return {
+                    photo: result.secure_url,
+                    imgId: result.public_id,
+                  };
+                })
+              );
             const newProduct =new Product({
                 pName, 
                 pDesc, 
-                brand, 
-                catagory, 
+                brand:brand.toLowerCase(), 
+                catagory:catagory.toLowerCase(), 
                 price:parseFloat(price), 
                 stock:parseFloat(stock), 
                 adminId, 
@@ -31,7 +35,7 @@ const createProduct=async(req, res)=>{
             });
 
             await newProduct.save();
-            return res.status(201).json({success:true, message:'New product has been created', newProduct});
+            return res.status(201).json({success:true, message:'New product has been created', id:newProduct._id});
         } else {
             return res.status(400).json({success:false, message:'Please fill the form'});
         }
@@ -80,16 +84,17 @@ const updateProduct=async(req, res)=>{
         const images=req.files;
         const product=await Product.findOne({_id:pId});
         if(product){
-            const imgUrls =[];
-            for(const image of images){
-                const result =  await cloudinary.uploader.upload(image.path, {
-                    resource_type:"auto"
+            const imgUrls = await Promise.all(
+                images.map(async (image) => {
+                  const result = await cloudinary.uploader.upload(image.path, {
+                    resource_type: "auto",
                   });
-                  imgUrls.push({
-                    photo:result.secure_url, 
-                    imgId:result.public_id
-                  });
-            };
+                  return {
+                    photo: result.secure_url,
+                    imgId: result.public_id,
+                  };
+                })
+              );
             const productUpdate = await Product.findOneAndUpdate({_id:pId}, {$set:{
                 pName, 
                 pDesc, 
@@ -97,11 +102,11 @@ const updateProduct=async(req, res)=>{
                 catagory, 
                 price:parseFloat(price), 
                 stock:parseFloat(stock), 
-                pImgs:imgUrls ? imgUrls : product.pImgs
+                pImgs:imgUrls.length > 0 ? imgUrls : product.pImgs
             }}, {new:true});
 
             if (productUpdate) {
-                return res.status(200).json({success:true, message:'Product has been Updated', productUpdate});
+                return res.status(200).json({success:true, message:'Product has been Updated', id:productUpdate._id});
             } else {
                 return res.status(400).json({success:false, message:'Product Update falied'});
             }
@@ -115,6 +120,40 @@ const updateProduct=async(req, res)=>{
     }
 };
 
+const getAllItemProduct= async(req, res)=>{
+    try {
+        const {lowP,highP,lowR,highR}=req.params;
+        let { brand } = req.query;  // Use query parameters for dynamic brand filters
+
+        // Check if brand is an array or a single string
+        brand = Array.isArray(brand) ? brand : brand ? [brand] : [];
+
+        const products = await Product.find({
+            $or: [
+               {
+                $and:[
+                       {
+                        $and:[{ averageRat: { $lte: highR}}, {averageRat:{$gte: lowR } }]
+                       },
+                       {
+                        $and:[{ price: { $lte: highP}}, {price:{$gte: lowP } }]
+                       }
+                ]
+               },
+                brand.length > 0 ? { brand: { $in: brand } } : {},  // Use $in to filter by multiple brands
+            ].filter(Boolean), // Remove empty objects if brand is not specified
+        });
+            
+        if (products.length > 0) {
+            return res.status(200).json({success:true, products:products});
+        } else {
+            return res.status(404).json({success:false, message:'Products not found'});
+        }
+    } catch (error) {
+        return res.status(500).json({status:false, message:`Something went worng : ${error.message}`}); 
+        
+    };
+};
 
 const getAllProduct=async(req, res)=>{
     try {
@@ -163,7 +202,7 @@ const getAdminProduct=async(req, res)=>{
 const getCataProduct=async(req, res)=>{
     try {
         const {catagory}=req.params;
-        const cataProduct=await Product.find({catagory:catagory});
+        const cataProduct=await Product.find({catagory:catagory.toLowerCase()});
         if (cataProduct.length > 0) {
             return res.status(200).json({success:true, products:cataProduct.reverse()});
         } else {
@@ -179,7 +218,7 @@ const getCataProduct=async(req, res)=>{
 const getBrandProduct=async(req, res)=>{
     try {
         const {brand}=req.params;
-        const brandProduct=await Product.find({brand:brand});
+        const brandProduct=await Product.find({brand:brand.toLowerCase()});
         if (brandProduct.length > 0) {
             return res.status(200).json({success:true, products:brandProduct.reverse()});
         } else {
@@ -226,12 +265,20 @@ const deleteProduct=async(req, res)=>{
         const {pId}=req.params;
         const product = await Product.findOne({_id:pId});
         if (product) {
-            const productDelete = await Product.findOneAndDelete({_id:pId});
-            if (productDelete) {
-                return res.status(202).json({succcess:true, message:'Product Delete successfully'});
-            } else {
-                return res.status(400).json({succcess:true, message:'Product isnot deleted'});
-            }
+            for(const img of product.pImgs){
+                const result = await cloudinary.uploader.destroy(img.imgId);
+                if(result.result ==='ok'){
+                    const productDelete = await Product.findOneAndDelete({_id:pId});
+                    const cartProductDelete =await Cart.deleteMany({product:pId});
+                     if(productDelete && cartProductDelete){
+                        return res.status(200).json({success:true,message :'Product deleted'});
+                     }else{
+                        return res.status(400).json({success:false,message :'Product is not deleted'});
+                     }
+                }else{
+                    return res.status(400).json({success:false,message :'photo is not deleted'});
+                }
+            };
         } else {
             return res.status(404).json({succcess:true, message:'Product not found'});
         }
@@ -251,4 +298,4 @@ const deleteProduct=async(req, res)=>{
 //     }
 //   };
 
-module.exports={createProduct, createRating, updateProduct, getAllProduct, getAdminProduct,  getSingleProduct, getPriceProduct, getCataProduct,  getBrandProduct, getRatProduct, deleteProduct};
+module.exports={createProduct, createRating, updateProduct,getAllItemProduct, getAllProduct, getAdminProduct,  getSingleProduct, getPriceProduct, getCataProduct,  getBrandProduct, getRatProduct, deleteProduct};
